@@ -23,7 +23,7 @@ export const track = (target, key) => {
   }
   let deps = depsMap.get(key); // 获取属性所对应的副作用 如果没有也重新set一个空的
   if (!deps) {
-    deps.set(key, (deps = new Map()));
+    depsMap.set(key, (deps = new Map()));
   }
   deps.set(key, activeEffect);
 };
