@@ -36,17 +36,17 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \*******************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"reactive\": () => (/* binding */ reactive)\n/* harmony export */ });\n/* harmony import */ var _utils_isObject__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/isObject */ \"./src/utils/isObject.js\");\n/* harmony import */ var _effect__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./effect */ \"./src/reactive/effect.js\");\n\n\nconst reactive = (target) => {\n  if (!(0,_utils_isObject__WEBPACK_IMPORTED_MODULE_0__.isObject)(target)) {\n    return target;\n  }\n  const proxy = new Proxy(target, {\n    get(target, key, recevier) {\n      (0,_effect__WEBPACK_IMPORTED_MODULE_1__.track)(target, key);\n      return Reflect.get(target, key, recevier);\n    },\n    set(target, key, value, recevier) {\n      const res = Reflect.set(target, key, value, recevier);\n      (0,_effect__WEBPACK_IMPORTED_MODULE_1__.trigger)(target, key);\n      return res;\n    },\n  });\n  return proxy;\n};\n\n\n//# sourceURL=webpack://mini-vue/./src/reactive/index.js?");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"isReactive\": () => (/* binding */ isReactive),\n/* harmony export */   \"reactive\": () => (/* binding */ reactive)\n/* harmony export */ });\n/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils */ \"./src/utils/index.js\");\n/* harmony import */ var _effect__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./effect */ \"./src/reactive/effect.js\");\n\n\n\nconst proxyMap = new WeakMap();\n\nconst reactive = (target) => {\n  if (!(0,_utils__WEBPACK_IMPORTED_MODULE_0__.isObject)(target)) {\n    return target;\n  }\n  if (isReactive(target)) {\n    return target;\n  }\n  if (proxyMap.get(target)) {\n    return proxyMap.get(target);\n  }\n  const proxy = new Proxy(target, {\n    get(target, key, recevier) {\n      if (target.__isReactive) {\n        return true;\n      }\n      (0,_effect__WEBPACK_IMPORTED_MODULE_1__.track)(target, key);\n      return Reflect.get(target, key, recevier);\n    },\n    set(target, key, value, recevier) {\n      const oldValue = target[key];\n      const res = Reflect.set(target, key, value, recevier);\n      if ((0,_utils__WEBPACK_IMPORTED_MODULE_0__.hasChanged)(oldValue, value)) {\n        (0,_effect__WEBPACK_IMPORTED_MODULE_1__.trigger)(target, key);\n      }\n      return res;\n    },\n  });\n  proxyMap.set(target, proxy);\n  return proxy;\n};\n\n/**\n * 此函数可以判断该对象是否被代理\n * 处理特殊情况：reactive(reactive({a:1}))\n */\nconst isReactive = (target) => {\n  return !!(target && target.__isReactive);\n};\n\n\n//# sourceURL=webpack://mini-vue/./src/reactive/index.js?");
 
 /***/ }),
 
-/***/ "./src/utils/isObject.js":
-/*!*******************************!*\
-  !*** ./src/utils/isObject.js ***!
-  \*******************************/
+/***/ "./src/utils/index.js":
+/*!****************************!*\
+  !*** ./src/utils/index.js ***!
+  \****************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"isObject\": () => (/* binding */ isObject)\n/* harmony export */ });\nconst isObject = (target) => {\n  return typeof target === \"object\" && target !== null;\n};\n\n\n//# sourceURL=webpack://mini-vue/./src/utils/isObject.js?");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"hasChanged\": () => (/* binding */ hasChanged),\n/* harmony export */   \"isObject\": () => (/* binding */ isObject)\n/* harmony export */ });\nconst isObject = (target) => {\n  return typeof target === \"object\" && target !== null;\n};\n\n/**\n * 判断响应式的值是否真的发生改变\n * 处理情况：当我们给响应式的值重复赋值同一值的时候也trigger去了，这是不对的，只有真正发生改变\n * 函数注意：这里处理了一个特殊情况，两个NaN是不等的\n */\nconst hasChanged = (oldValue, value) => {\n  return oldValue !== value && !(Number.isNaN(oldValue) && Number.isNaN(value));\n};\n\n\n//# sourceURL=webpack://mini-vue/./src/utils/index.js?");
 
 /***/ })
 
