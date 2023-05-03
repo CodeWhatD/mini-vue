@@ -1,14 +1,9 @@
 import { reactive } from "./reactive";
 import { effect } from "./reactive/effect";
+import { ref } from "./reactive/ref";
 
-const observer = (globalThis.observer = reactive({
-  count1: 1,
-  count2: 1,
-}));
+const foo = (globalThis.foo = ref(1));
 
 effect(() => {
-  console.log("track count1....", observer.count1);
-  effect(() => {
-    console.log("track count2....", observer.count2);
-  });
+  console.log("track foo....", foo.value);
 });
