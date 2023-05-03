@@ -10,3 +10,7 @@ export const isObject = (target) => {
 export const hasChanged = (oldValue, value) => {
   return oldValue !== value && !(Number.isNaN(oldValue) && Number.isNaN(value));
 };
+
+export const isArray = (target) => {
+  return Array.isArray(target);
+};

@@ -1,4 +1,4 @@
-import { isObject, hasChanged } from "../utils";
+import { isObject, hasChanged, isArray } from "../utils";
 import { track, trigger } from "./effect";
 
 const proxyMap = new WeakMap();
@@ -24,9 +24,13 @@ export const reactive = (target) => {
     },
     set(target, key, value, recevier) {
       const oldValue = target[key];
+      const oldLength = target.length;
       const res = Reflect.set(target, key, value, recevier);
       if (hasChanged(oldValue, value)) {
         trigger(target, key);
+        if (isArray(target) && hasChanged(oldLength, target.length)) {
+          trigger(target, "length");
+        }
       }
       return res;
     },
