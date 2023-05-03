@@ -18,8 +18,9 @@ export const reactive = (target) => {
       if (target.__isReactive) {
         return true;
       }
+      const res = Reflect.get(target, key, recevier);
       track(target, key);
-      return Reflect.get(target, key, recevier);
+      return isObject(res) ? reactive(res) : res;
     },
     set(target, key, value, recevier) {
       const oldValue = target[key];
