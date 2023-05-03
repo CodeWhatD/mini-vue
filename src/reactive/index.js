@@ -29,6 +29,7 @@ export const reactive = (target) => {
       if (hasChanged(oldValue, value)) {
         trigger(target, key);
         if (isArray(target) && hasChanged(oldLength, target.length)) {
+          // 简单解释这个分支：对于数组push来说，我们无法取到它变动了哪个属性，所以我们需要手动对数组的length属性进行特殊处理，手动触发
           trigger(target, "length");
         }
       }
