@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { reactive } from ".";
-import { isObject } from "../utils";
+import { hasChanged, isObject } from "../utils";
 import { track, trigger } from "./effect";
 export const ref = (value) => {
   return isRef(value) ? value : new RefImpl(value);
@@ -23,8 +23,10 @@ class RefImpl {
     return this._value;
   }
   set value(value) {
-    this._value = value;
-    trigger(this, "value");
+    if (hasChanged(this.value, value)) {
+      this._value = value;
+      trigger(this, "value");
+    }
   }
 }
 const convert = (value) => {
