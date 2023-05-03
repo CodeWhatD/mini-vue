@@ -24,7 +24,7 @@ class RefImpl {
   }
   set value(value) {
     if (hasChanged(this.value, value)) {
-      this._value = value;
+      this._value = convert(value);
       trigger(this, "value");
     }
   }
