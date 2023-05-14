@@ -1,6 +1,6 @@
 const activeEffectStack = [];
 let activeEffect;
-export const effect = (fn) => {
+export const effect = (fn, options = {}) => {
   const effectFn = () => {
     try {
       activeEffect = effectFn;
@@ -11,7 +11,12 @@ export const effect = (fn) => {
       activeEffect = activeEffectStack[activeEffectStack.length - 1];
     }
   };
-  effectFn();
+  if (!options.lazy) {
+    effectFn();
+  }
+  if (options.scheduler) {
+    effectFn.scheduler = options.scheduler;
+  }
   return effectFn;
 };
 
@@ -42,6 +47,12 @@ export const trigger = (target, key) => {
     return;
   }
   deps.forEach((effectFn) => {
-    effectFn();
+    // 执行调度
+    if (effectFn.scheduler) {
+      console.log("执行调度");
+      effectFn.scheduler(effectFn);
+    } else {
+      effectFn();
+    }
   });
 };

@@ -14,3 +14,7 @@ export const hasChanged = (oldValue, value) => {
 export const isArray = (target) => {
   return Array.isArray(target);
 };
+
+export const isFunction = (target) => {
+  return typeof target === "function";
+};
