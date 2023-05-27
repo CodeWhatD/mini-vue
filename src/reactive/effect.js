@@ -49,7 +49,6 @@ export const trigger = (target, key) => {
   deps.forEach((effectFn) => {
     // 执行调度
     if (effectFn.scheduler) {
-      console.log("执行调度");
       effectFn.scheduler(effectFn);
     } else {
       effectFn();
