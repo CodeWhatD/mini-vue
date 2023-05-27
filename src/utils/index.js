@@ -18,3 +18,15 @@ export const isArray = (target) => {
 export const isFunction = (target) => {
   return typeof target === "function";
 };
+
+export const isString = (target) => {
+  return target === "string";
+};
+
+export const isNumber = (target) => {
+  return target === "number";
+};
+
+export const isBoolean = (target) => {
+  return target === "boolean";
+};

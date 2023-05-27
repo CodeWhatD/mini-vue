@@ -1,3 +1,5 @@
+import { isArray, isNumber, isString } from "../utils";
+
 export const ShapeFlgs = {
   ELEMENT: 1,
   TEXT: 1 << 1,
@@ -7,3 +9,39 @@ export const ShapeFlgs = {
   ARRAY_CHILDREN: 1 << 5,
   CHILDREN: 1 << 4 || 1 << 5,
 };
+
+export const Text = Symbol("Text");
+export const Fragment = Symbol("Fragment");
+
+/**
+ *
+ * @param {string | Object | Text | Fragment} type
+ * @param {Object | null} props
+ * @param {string | Array | null} children
+ * @returns VNode
+ */
+export function h(type, props, children) {
+  let shapeFlag = 0;
+  if (isString(type)) {
+    shapeFlag = ShapeFlgs.ELEMENT;
+  } else if (type === Text) {
+    shapeFlag = ShapeFlgs.TEXT;
+  } else if (type === Fragment) {
+    shapeFlag = ShapeFlgs.FRAGMENT;
+  } else {
+    shapeFlag = ShapeFlgs.COMPONENT;
+  }
+
+  if (isString(children) || isNumber(children)) {
+    shapeFlag |= ShapeFlgs.TEXT_CHILDREN;
+    children = children.toString();
+  } else if (isArray(children)) {
+    shapeFlag |= ShapeFlgs.ARRAY_CHILDREN;
+  }
+  return {
+    type,
+    props,
+    children,
+    shapeFlag,
+  };
+}
