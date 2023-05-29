@@ -1,3 +1,4 @@
+import { isBoolean } from "../utils";
 import { ShapeFlgs } from "./vnode";
 
 export const render = (vnode, container) => {
@@ -32,9 +33,10 @@ const mountFragment = (vnode, container) => {
   mountChildren(vnode, container);
 };
 const mountComponent = (vnode, container) => {};
+const domPropsRE = /[A-Z]|^(value|checked|selected|muted|disabled)&/; // A-Z 匹配 innerHtml和textContent
 const mountProps = (props, el) => {
   for (const key in props) {
-    const value = props[key];
+    let value = props[key];
     switch (key) {
       case "class":
         el.className = value;
@@ -47,6 +49,21 @@ const mountProps = (props, el) => {
         if (/^on[^a-z]/.test(value)) {
           const eventName = value.slice(2).toLowerCase(); // onClick => click
           el.addEventListener(eventName, value);
+        } else if (domPropsRE.test(key)) {
+          // 处理dom中自带的属性
+          if (value === "" || isBoolean(value)) {
+            // 处理直接在元素上给checked的情况，注意checked后面给的值是''也会选中
+            value = true;
+          }
+          el[key] = value;
+        } else {
+          // 这里处理的是当自定义属性给的是false则直接去除该属性
+          // 注意：value == null 这里用==也是为了实现 null与undefined比较时是相等的
+          if (value == null || value === false) {
+            el.removeAttribute(key);
+          } else {
+            el.setAttribute(key, value);
+          }
         }
         break;
     }

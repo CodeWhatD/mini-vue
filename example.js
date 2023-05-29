@@ -1,4 +1,3 @@
-const flag = 1 << 1;
-const _f = 1 << 1;
+const a = null;
 
-console.log(flag & _f);
+console.log(a == null);
