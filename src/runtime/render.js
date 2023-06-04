@@ -48,8 +48,9 @@ const mountProps = (props, el) => {
         break;
       default:
         // 处理onXX事件情况
-        if (/^on[^a-z]/.test(value)) {
-          const eventName = value.slice(2).toLowerCase(); // onClick => click
+        if (/^on[^a-z]/.test(key)) {
+          console.log('事件')
+          const eventName = key.slice(2).toLowerCase(); // onClick => click
           el.addEventListener(eventName, value);
         } else if (domPropsRE.test(key)) {
           // 处理dom中自带的属性

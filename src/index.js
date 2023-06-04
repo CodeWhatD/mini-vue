@@ -15,6 +15,9 @@ const TextNode = h(
   "div",
   {
     class: "a b",
+    onClick: () => {
+      console.log("点击了");
+    },
   },
   [1, h("span", { class: "bb" }, "内部"), "44"]
 );
