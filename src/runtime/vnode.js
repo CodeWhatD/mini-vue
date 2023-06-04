@@ -22,7 +22,7 @@ export const Fragment = Symbol("Fragment");
  */
 export function h(type, props, children) {
   let shapeFlag = 0;
-  if (isString(type)) {
+  if (isString(typeof type)) {
     shapeFlag = ShapeFlgs.ELEMENT;
   } else if (type === Text) {
     shapeFlag = ShapeFlgs.TEXT;
@@ -31,8 +31,7 @@ export function h(type, props, children) {
   } else {
     shapeFlag = ShapeFlgs.COMPONENT;
   }
-
-  if (isString(children) || isNumber(children)) {
+  if (isString(typeof children) || isNumber(typeof children)) {
     shapeFlag |= ShapeFlgs.TEXT_CHILDREN;
     children = children.toString();
   } else if (isArray(children)) {

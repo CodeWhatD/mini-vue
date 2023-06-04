@@ -1,4 +1,4 @@
-import { isBoolean } from "../utils";
+import { isBoolean, isNumber, isString } from "../utils";
 import { ShapeFlgs } from "./vnode";
 
 export const render = (vnode, container) => {
@@ -40,10 +40,12 @@ const mountProps = (props, el) => {
     switch (key) {
       case "class":
         el.className = value;
+        break;
       case "style":
         for (const styleName in value) {
           el.style[styleName] = value[styleName];
         }
+        break;
       default:
         // 处理onXX事件情况
         if (/^on[^a-z]/.test(value)) {
@@ -72,10 +74,14 @@ const mountProps = (props, el) => {
 const mountChildren = (vnode, container) => {
   const { shapeFlag, children } = vnode;
   if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
-    mountTextNode(vnode, container);
+    mountTextNode(children, container);
   } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
     children.forEach((child) => {
-      mount(child, container);
+      if (isString(typeof child) || isNumber(typeof child)) {
+        mountTextNode(child, container);
+      } else {
+        mount(child, container);
+      }
     });
   }
 };
