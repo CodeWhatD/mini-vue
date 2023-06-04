@@ -33,7 +33,7 @@ const mountFragment = (vnode, container) => {
   mountChildren(vnode, container);
 };
 const mountComponent = (vnode, container) => {};
-const domPropsRE = /[A-Z]|^(value|checked|selected|muted|disabled)&/; // A-Z 匹配 innerHtml和textContent
+const domPropsRE = /[A-Z]|^(value|checked|selected|muted|disabled)$/; // A-Z 匹配 innerHtml和textContent
 const mountProps = (props, el) => {
   for (const key in props) {
     let value = props[key];
@@ -49,7 +49,6 @@ const mountProps = (props, el) => {
       default:
         // 处理onXX事件情况
         if (/^on[^a-z]/.test(key)) {
-          console.log('事件')
           const eventName = key.slice(2).toLowerCase(); // onClick => click
           el.addEventListener(eventName, value);
         } else if (domPropsRE.test(key)) {
@@ -66,7 +65,7 @@ const mountProps = (props, el) => {
             el.removeAttribute(key);
           } else {
             el.setAttribute(key, value);
-          }
+          } 
         }
         break;
     }
