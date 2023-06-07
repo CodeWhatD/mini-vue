@@ -24,6 +24,7 @@ const mountElement = (vnode, container) => {
   mountProps(props, el);
   mountChildren(vnode, el);
   container.appendChild(el);
+  vnode.el = el
 };
 const mountTextNode = (vnode, container) => {
   const textNode = document.createTextNode(vnode);
