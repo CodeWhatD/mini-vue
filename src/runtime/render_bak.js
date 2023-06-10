@@ -43,7 +43,7 @@ const processElement = (preVNode, vnode, container) => {
 const mountElement = (vnode, container) => {
   const { type, props } = vnode;
   const el = document.createElement(type);
-  mountProps(props, el);
+  patchProps(null, props, el);
   mountChildren(vnode, el);
   container.appendChild(el);
   vnode.el = el;
@@ -59,6 +59,8 @@ const patchProps = (preProps, nextProps, el) => {
   if (preProps === nextProps) {
     return;
   }
+  preProps = preProps || {};
+  nextProps = nextProps || {};
   for (const key in nextProps) {
     const pre = preProps[key];
     const next = nextProps[key];
@@ -66,50 +68,59 @@ const patchProps = (preProps, nextProps, el) => {
       patchDomProp(pre, next, key, el);
     }
   }
+  for (const key in preProps) {
+    if (nextProps[key] == null) {
+      patchDomProp(preProps[key], null, key, el);
+    }
+  }
 };
 
-const patchDomProp = (pre, next, key, el) => {};
+const patchDomProp = (preValue, nextValue, key, el) => {
+  switch (key) {
+    case "class":
+      el.className = nextValue || ""; // 或是为了防止 nextValue为null或者false 这种直接赋值会赋值成字符串false
+      break;
+    case "style":
+      for (const nextStyleName in nextValue) {
+        el.style[nextStyleName] = nextValue[nextStyleName];
+      }
+      if (preValue) {
+        for (const styleName in preValue) {
+          if (nextValue[styleName] == null) {
+            // 这里处理的情况是 如果next元素中不存在pre元素的style 那么移除
+            el[styleName] = "";
+          }
+        }
+      }
+      break;
+    default:
+      if (/^on[^a-z]/.test(key)) {
+        const eventName = key.slice(2).toLowerCase(); // onClick => click
+        if (preValue) {
+          el.removeEventListener(eventName, preValue);
+        }
+        if (nextValue) {
+          el.addEventListener(eventName, nextValue);
+        }
+      } else if (domPropsRE.test(key)) {
+        if (nextValue === "" || isBoolean(nextValue)) {
+          nextValue = true;
+        }
+        el[key] = nextValue;
+      } else {
+        if (nextValue == null || nextValue === false) {
+          el.removeAttribute(key);
+        } else {
+          el.setAttribute(key, nextValue);
+        }
+      }
+      break;
+  }
+};
 
 const patchChildren = () => {};
 
 const domPropsRE = /[A-Z]|^(value|checked|selected|muted|disabled)$/; // A-Z 匹配 innerHtml和textContent
-const mountProps = (props, el) => {
-  for (const key in props) {
-    let value = props[key];
-    switch (key) {
-      case "class":
-        el.className = value;
-        break;
-      case "style":
-        for (const styleName in value) {
-          el.style[styleName] = value[styleName];
-        }
-        break;
-      default:
-        // 处理onXX事件情况
-        if (/^on[^a-z]/.test(key)) {
-          const eventName = key.slice(2).toLowerCase(); // onClick => click
-          el.addEventListener(eventName, value);
-        } else if (domPropsRE.test(key)) {
-          // 处理dom中自带的属性
-          if (value === "" || isBoolean(value)) {
-            // 处理直接在元素上给checked的情况，注意checked后面给的值是''也会选中
-            value = true;
-          }
-          el[key] = value;
-        } else {
-          // 这里处理的是当自定义属性给的是false则直接去除该属性
-          // 注意：value == null 这里用==也是为了实现 null与undefined比较时是相等的
-          if (value == null || value === false) {
-            el.removeAttribute(key);
-          } else {
-            el.setAttribute(key, value);
-          }
-        }
-        break;
-    }
-  }
-};
 
 const mountChildren = (vnode, container) => {
   const { shapeFlag, children } = vnode;
