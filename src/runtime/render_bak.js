@@ -41,10 +41,14 @@ const processElement = (preVNode, vnode, container) => {
 };
 
 const mountElement = (vnode, container) => {
-  const { type, props } = vnode;
+  const { type, props, shapeFlag, children } = vnode;
   const el = document.createElement(type);
   patchProps(null, props, el);
-  mountChildren(vnode, el);
+  if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
+    mountText(children, container);
+  } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
+    mountChildren(children, container);
+  }
   container.appendChild(el);
   vnode.el = el;
 };
@@ -118,23 +122,63 @@ const patchDomProp = (preValue, nextValue, key, el) => {
   }
 };
 
-const patchChildren = () => {};
+const unMountChildren = (children) => {
+  children.forEach((child) => {
+    unMount(child);
+  });
+};
+
+// 此函数将根据preVnode和nextVnode的不同类型执行对应的path操作
+const patchChildren = (preVnode, nextVnode, container) => {
+  const { shapeFlag: preShapeFlag, children: preChildren } = preVnode;
+  const { shapeFlag, children: nextChildren } = nextVnode;
+  if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
+    if (preShapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
+      unMountChildren(preChildren);
+    }
+    if (preChildren !== nextChildren) {
+      container.textContent = nextVnode.el.textContent;
+    }
+  } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
+    if (preShapeFlag & ShapeFlgs.TEXT_CHILDREN) {
+      container.textContent = "";
+      mountChildren(nextChildren, container);
+    } else if (preShapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
+      patchArrayChildren(preChildren, nextChildren, container);
+    } else {
+      mountChildren(nextChildren, container);
+    }
+  } else {
+    if (preShapeFlag & ShapeFlgs.TEXT_CHILDREN) {
+      container.textContent = "";
+    } else if (preShapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
+      unMountChildren(preChildren);
+    }
+  }
+};
+
+const patchArrayChildren = (preChildren, nextChildren, container) => {
+  const preChildrenLength = preChildren.length;
+  const nextChildrenLength = nextChildren.length;
+  const commonLength = Math.min(preChildrenLength, nextChildrenLength); // 公共长度
+  if (preChildrenLength === nextChildrenLength) {
+    for (let index = 0; index < commonLength; index++) {
+      patch(preChildren[index], nextChildren[index], container);
+    }
+  }
+  if (preChildrenLength > nextChildrenLength) {
+    unMountChildren(preChildren.slice(commonLength));
+  } else if (preChildrenLength < nextChildrenLength) {
+    mountChildren(nextChildren.slice(commonLength), container);
+  }
+};
 
 const domPropsRE = /[A-Z]|^(value|checked|selected|muted|disabled)$/; // A-Z 匹配 innerHtml和textContent
 
-const mountChildren = (vnode, container) => {
-  const { shapeFlag, children } = vnode;
-  if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
-    mountText(children, container);
-  } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
-    children.forEach((child) => {
-      if (isString(typeof child) || isNumber(typeof child)) {
-        mountText(child, container);
-      } else {
-        patch(null, child, container);
-      }
-    });
-  }
+const mountChildren = (children, container) => {
+  children.forEach((child) => {
+    patch(null, child, container);
+  });
 };
 
 const processText = (preVNode, vnode, container) => {
