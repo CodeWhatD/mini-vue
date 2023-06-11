@@ -43,5 +43,6 @@ export function h(type, props, children) {
     children,
     shapeFlag,
     el: null,
+    anchor: null,
   };
 }

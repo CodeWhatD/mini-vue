@@ -4,7 +4,6 @@ import { ShapeFlgs } from "./vnode";
 export const render = (vnode, container) => {
   const preVNode = container._vnode;
   if (!vnode) {
-    // 如果没有nextVNode
     if (preVNode) {
       unMount(preVNode);
     }
@@ -12,6 +11,40 @@ export const render = (vnode, container) => {
     patch(preVNode, vnode, container);
   }
   container._vnode = vnode;
+};
+
+const patch = (preVNode, nextvnode, container, anchor) => {
+  // 如果两次的vnode不是相同的根节点，那么直接卸载preVnode
+  if (preVNode && !isSameNode(preVNode, nextvnode)) {
+    anchor = (preVNode.el || preVNode.anchor).nextSibling;
+    unMount(preVNode);
+    preVNode = null;
+  }
+  const { shapeFlag } = nextvnode;
+  if (shapeFlag & ShapeFlgs.ELEMENT) {
+    processElement(preVNode, nextvnode, container, anchor);
+  } else if (shapeFlag & ShapeFlgs.TEXT) {
+    processText(preVNode, nextvnode, container, anchor);
+  } else if (shapeFlag & ShapeFlgs.FRAGMENT) {
+    processFragment(preVNode, nextvnode, container, anchor);
+  } else if (shapeFlag & ShapeFlgs.COMPONENT) {
+    processComponent(preVNode, nextvnode, container, anchor);
+  }
+};
+
+const mountElement = (vnode, container, anchor) => {
+  const { type, props, shapeFlag, children } = vnode;
+  const el = document.createElement(type);
+  if (props) {
+    patchProps(null, props, el);
+  }
+  if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
+    el.textContent = children;
+  } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
+    mountChildren(children, el, anchor);
+  }
+  container.insertBefore(el, anchor);
+  vnode.el = el;
 };
 
 const unMount = (vnode) => {
@@ -28,29 +61,43 @@ const unMount = (vnode) => {
 
 const unMountComponent = (vnode) => {};
 
-const unMountFragment = (vnode) => {};
+const unMountFragment = (vnode) => {
+  let { el: current, anchor: end } = vnode;
+  const parentNode = current.parentNode;
+  while (current !== end) {
+    let next = current.nextSibling;
+    parentNode.removeChild(current);
+    current = next;
+  }
+  parentNode.removeChild(end);
+};
 
-const processComponent = (preVNode, vnode, container) => {};
+const processComponent = (preVNode, vnode, container, anchor) => {};
 
-const processFragment = (preVNode, vnode, container) => {};
-
-const processElement = (preVNode, vnode, container) => {
+const processFragment = (preVNode, vnode, container, anchor) => {
+  const fragmentStartAnchor = (vnode.el = preVNode
+    ? preVNode.el
+    : document.createTextNode(""));
+  const fragmentEndAnchor = (vnode.anchor = preVNode
+    ? preVNode.anchor
+    : document.createTextNode(""));
   if (preVNode) {
+    patchChildren(preVNode, vnode, container, fragmentEndAnchor);
   } else {
+    container.insertBefore(fragmentStartAnchor, anchor);
+    container.insertBefore(fragmentEndAnchor, anchor);
+    mountChildren(vnode.children, container, fragmentEndAnchor);
   }
 };
 
-const mountElement = (vnode, container) => {
-  const { type, props, shapeFlag, children } = vnode;
-  const el = document.createElement(type);
-  patchProps(null, props, el);
-  if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
-    mountText(children, container);
-  } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
-    mountChildren(children, container);
+const processElement = (preVNode, vnode, container, anchor) => {
+  if (preVNode) {
+    console.log("preVnode", preVNode);
+    console.log("vnode", vnode);
+    patchElement(preVNode, vnode);
+  } else {
+    mountElement(vnode, container, anchor);
   }
-  container.appendChild(el);
-  vnode.el = el;
 };
 
 const patchElement = (preVNode, vnode) => {
@@ -85,17 +132,22 @@ const patchDomProp = (preValue, nextValue, key, el) => {
       el.className = nextValue || ""; // 或是为了防止 nextValue为null或者false 这种直接赋值会赋值成字符串false
       break;
     case "style":
-      for (const nextStyleName in nextValue) {
-        el.style[nextStyleName] = nextValue[nextStyleName];
-      }
-      if (preValue) {
-        for (const styleName in preValue) {
-          if (nextValue[styleName] == null) {
-            // 这里处理的情况是 如果next元素中不存在pre元素的style 那么移除
-            el[styleName] = "";
+      if (nextValue == null) {
+        el.removeAttribute("style");
+      } else {
+        for (const nextStyleName in nextValue) {
+          el.style[nextStyleName] = nextValue[nextStyleName];
+        }
+        if (preValue) {
+          for (const styleName in preValue) {
+            if (nextValue[styleName] == null) {
+              // 这里处理的情况是 如果next元素中不存在pre元素的style 那么移除
+              el[styleName] = "";
+            }
           }
         }
       }
+
       break;
     default:
       if (/^on[^a-z]/.test(key)) {
@@ -129,24 +181,25 @@ const unMountChildren = (children) => {
 };
 
 // 此函数将根据preVnode和nextVnode的不同类型执行对应的path操作
-const patchChildren = (preVnode, nextVnode, container) => {
+const patchChildren = (preVnode, nextVnode, container, anchor) => {
   const { shapeFlag: preShapeFlag, children: preChildren } = preVnode;
   const { shapeFlag, children: nextChildren } = nextVnode;
   if (shapeFlag & ShapeFlgs.TEXT_CHILDREN) {
     if (preShapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
       unMountChildren(preChildren);
     }
+    console.log(preChildren, nextChildren);
     if (preChildren !== nextChildren) {
-      container.textContent = nextVnode.el.textContent;
+      container.textContent = nextChildren;
     }
   } else if (shapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
     if (preShapeFlag & ShapeFlgs.TEXT_CHILDREN) {
       container.textContent = "";
-      mountChildren(nextChildren, container);
+      mountChildren(nextChildren, container, anchor);
     } else if (preShapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
-      patchArrayChildren(preChildren, nextChildren, container);
+      patchArrayChildren(preChildren, nextChildren, container, anchor);
     } else {
-      mountChildren(nextChildren, container);
+      mountChildren(nextChildren, container, anchor);
     }
   } else {
     if (preShapeFlag & ShapeFlgs.TEXT_CHILDREN) {
@@ -157,61 +210,43 @@ const patchChildren = (preVnode, nextVnode, container) => {
   }
 };
 
-const patchArrayChildren = (preChildren, nextChildren, container) => {
+const patchArrayChildren = (preChildren, nextChildren, container, anchor) => {
   const preChildrenLength = preChildren.length;
   const nextChildrenLength = nextChildren.length;
   const commonLength = Math.min(preChildrenLength, nextChildrenLength); // 公共长度
   if (preChildrenLength === nextChildrenLength) {
     for (let index = 0; index < commonLength; index++) {
-      patch(preChildren[index], nextChildren[index], container);
+      patch(preChildren[index], nextChildren[index], container, anchor);
     }
   }
   if (preChildrenLength > nextChildrenLength) {
     unMountChildren(preChildren.slice(commonLength));
   } else if (preChildrenLength < nextChildrenLength) {
-    mountChildren(nextChildren.slice(commonLength), container);
+    mountChildren(nextChildren.slice(commonLength), container, anchor);
   }
 };
 
 const domPropsRE = /[A-Z]|^(value|checked|selected|muted|disabled)$/; // A-Z 匹配 innerHtml和textContent
 
-const mountChildren = (children, container) => {
+const mountChildren = (children, container, anchor) => {
   children.forEach((child) => {
-    patch(null, child, container);
+    patch(null, child, container, anchor);
   });
 };
 
-const processText = (preVNode, vnode, container) => {
+const processText = (preVNode, vnode, container, anchor) => {
   if (preVNode) {
     vnode.el = preVNode.el;
     preVNode.el.textContent = vnode.children;
   } else {
-    mountText(vnode, container);
+    mountText(vnode, container, anchor);
   }
 };
 
-const mountText = (vnode, container) => {
+const mountText = (vnode, container, anchor) => {
   const textNode = document.createTextNode(vnode.children);
-  container.appendChild(textNode);
   vnode.el = textNode;
-};
-
-const patch = (preVNode, vnode, container) => {
-  // 如果两次的vnode不是相同的根节点，那么直接卸载preVnode
-  if (preVNode && !isSameNode(preVNode, vnode)) {
-    unMount(preVNode);
-    preVNode = null;
-  }
-  const { shapeFlgs } = vnode;
-  if (shapeFlgs & ShapeFlgs.COMPONENT) {
-    processComponent(preVNode, vnode, container);
-  } else if (shapeFlgs & ShapeFlgs.FRAGMENT) {
-    processFragment(preVNode, vnode, container);
-  } else if (shapeFlgs & ShapeFlgs.TEXT) {
-    processText(preVNode, vnode, container);
-  } else {
-    processElement(preVNode, vnode, container);
-  }
+  container.insertBefore(textNode, anchor);
 };
 
 const isSameNode = (preVNode, vnode) => {
