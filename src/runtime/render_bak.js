@@ -1,6 +1,6 @@
 import { isBoolean, isNumber, isString } from "../utils";
 import { ShapeFlgs } from "./vnode";
-
+// @ts-nocheck
 export const render = (vnode, container) => {
   const preVNode = container._vnode;
   if (!vnode) {
@@ -220,7 +220,7 @@ const patchChildren = (preVnode, nextVnode, container, anchor) => {
   }
 };
 
-const patchKeyedArrayChildren = (
+const patchKeyedArrayChildrenOrigin = (
   preChildren,
   nextChildren,
   container,
@@ -256,7 +256,117 @@ const patchKeyedArrayChildren = (
     unMount(pre);
   });
 };
+const patchKeyedArrayChildren = (
+  preChildren,
+  nextChildren,
+  container,
+  anchor
+) => {
+  let i = 0; // 前后两个vnode列表的头指针
+  let end1 = preChildren.length - 1; // pre的尾部指针
+  let end2 = nextChildren.length - 1; // next的尾部指针
 
+  // 两个vnode列表从头部开始从左往右对比
+  while (i <= end1 && i <= end2 && preChildren[i].key === nextChildren[i].key) {
+    patch(preChildren[i], nextChildren[i], container, anchor);
+    i++;
+  }
+  // 两个vnode列表从尾部部开始从右往左对比
+  while (
+    i <= end1 &&
+    i <= end2 &&
+    preChildren[end1].key === nextChildren[end2].key
+  ) {
+    patch(preChildren[end1], nextChildren[end2], container, anchor);
+    end1--;
+    end2--;
+  }
+
+  // 对新vnode列表剩余的新节点mount
+  if (i < end1) {
+    for (let j = i; j <= end2; j++) {
+      const needPosition = end2 + 1;
+      const curAnchor = nextChildren[needPosition].el;
+      patch(null, nextChildren[j], container, curAnchor);
+    }
+  } else if (i > end2) {
+    // 对旧vnode列表剩余的进行unmount
+    for (let j = i; j <= end1; j++) {
+      unMount(preChildren[j]);
+    }
+  } else {
+    // 这种情况就需要使用传统的diff了，满足这种情况条件是 新的vnode列表双端对比之后没有对比干净、旧的vnode列表双端对比也没有对比干净
+    let maxNewIndexSoFar = 0;
+    const toMount = new Array();
+    const preVnodeMap = new Map();
+    const source = new Array(end2 - i + 1).fill(-1); // 将新节点
+    preChildren.forEach((pre, j) => {
+      preVnodeMap.set(pre.key, {
+        pre,
+        index: j,
+      });
+    });
+    let move = false;
+    for (let k = 0; k < nextChildren.length; k++) {
+      const next = nextChildren[k];
+      if (preVnodeMap.has(next.key)) {
+        const { pre, j } = preVnodeMap.get(next.key);
+        patch(pre, next, container, anchor);
+        if (j < maxNewIndexSoFar) {
+          move = true;
+        } else {
+          maxNewIndexSoFar = j;
+        }
+        source[k] = j; // 将新节点对应位置的-1替换为老node列表中的索引位置
+        preVnodeMap.delete(next.key);
+      } else {
+        toMount.push(k + i);
+      }
+    }
+    // 解决旧节点中有的 新节点中没有的情况
+    preVnodeMap.forEach(({ pre }) => {
+      unMount(pre);
+    });
+    if (move) {
+      const seq = getSeq(source);
+      let j = seq.length - 1;
+      for (
+        let sourceIndex = source.length - 1;
+        sourceIndex < 0;
+        sourceIndex--
+      ) {
+        if (seq[j] === sourceIndex) {
+          // 不需要移动
+          j--;
+        } else {
+          const position = sourceIndex + i;
+          const curAnchor =
+            (nextChildren[position + 1] && nextChildren[position + 1].el) ||
+            anchor;
+          if (source[sourceIndex] === -1) {
+            // mount
+            patch(null, nextChildren[position], container, curAnchor);
+          } else {
+            // 移动
+            container.insertBefore(nextChildren[position], curAnchor);
+          }
+        }
+      }
+    } else if (toMount.length > 0) {
+      for (let t = toMount.length - 1; t <= 0; t--) {
+        const toMountElement = toMount[t]
+        const position = toMountElement + 1
+        const curAnchor =
+          (nextChildren[position] && nextChildren[position].el) || anchor;
+        patch(null, nextChildren[toMountElement], container, curAnchor);
+      }
+    }   
+  }
+};
+// 获得最长子序列（升序元素对应的索引数组），数组中存的都是下标
+const getSeq = (source) => {
+  return [];
+};
 const patchUnKeyArrayChildren = (
   preChildren,
   nextChildren,
