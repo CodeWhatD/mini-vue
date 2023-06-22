@@ -197,7 +197,17 @@ const patchChildren = (preVnode, nextVnode, container, anchor) => {
       container.textContent = "";
       mountChildren(nextChildren, container, anchor);
     } else if (preShapeFlag & ShapeFlgs.ARRAY_CHILDREN) {
-      patchArrayChildren(preChildren, nextChildren, container, anchor);
+      // 这里偷了一个懒 如果第一个元素就有key 那么就认为所有的都有Key
+      if (
+        preChildren[0] != null &&
+        preChildren[0].key &&
+        nextChildren[0] != null &&
+        nextChildren[0].key
+      ) {
+        patchKeyedArrayChildren(preChildren, nextChildren, container, anchor);
+      } else {
+        patchUnKeyArrayChildren(preChildren, nextChildren, container, anchor);
+      }
     } else {
       mountChildren(nextChildren, container, anchor);
     }
@@ -210,7 +220,49 @@ const patchChildren = (preVnode, nextVnode, container, anchor) => {
   }
 };
 
-const patchArrayChildren = (preChildren, nextChildren, container, anchor) => {
+const patchKeyedArrayChildren = (
+  preChildren,
+  nextChildren,
+  container,
+  anchor
+) => {
+  let maxNewIndexSoFar = 0;
+  const preVnodeMap = new Map();
+  preChildren.forEach((pre, j) => {
+    preVnodeMap.set(pre.key, {
+      pre,
+      index: j,
+    });
+  });
+  for (let i = 0; i < nextChildren.length; i++) {
+    const next = nextChildren[i];
+    const curAnchor =
+      i === 0 ? preChildren[0].el : nextChildren[i - 1].el.nextSibling;
+    if (preVnodeMap.has(next.key)) {
+      const { pre, j } = preVnodeMap.get(next.key);
+      patch(pre, next, container, anchor);
+      if (j < maxNewIndexSoFar) {
+        container.insertBefore(next.el, curAnchor);
+      } else {
+        maxNewIndexSoFar = j;
+      }
+      preVnodeMap.delete(next.key);
+    } else {
+      patch(null, next, container, curAnchor);
+    }
+  }
+  // 解决旧节点中有的 新节点中没有的情况
+  preVnodeMap.forEach(({ pre }) => {
+    unMount(pre);
+  });
+};
+
+const patchUnKeyArrayChildren = (
+  preChildren,
+  nextChildren,
+  container,
+  anchor
+) => {
   const preChildrenLength = preChildren.length;
   const nextChildrenLength = nextChildren.length;
   const commonLength = Math.min(preChildrenLength, nextChildrenLength); // 公共长度
