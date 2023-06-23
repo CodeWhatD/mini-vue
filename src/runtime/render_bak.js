@@ -113,6 +113,7 @@ const patchProps = (preProps, nextProps, el) => {
   preProps = preProps || {};
   nextProps = nextProps || {};
   for (const key in nextProps) {
+    if (key === "key") continue;
     const pre = preProps[key];
     const next = nextProps[key];
     if (pre !== next) {
@@ -120,7 +121,7 @@ const patchProps = (preProps, nextProps, el) => {
     }
   }
   for (const key in preProps) {
-    if (nextProps[key] == null) {
+    if (key !== "key" && nextProps[key] == null) {
       patchDomProp(preProps[key], null, key, el);
     }
   }
@@ -300,15 +301,16 @@ const patchKeyedArrayChildren = (
     const toMount = new Array();
     const preVnodeMap = new Map();
     const source = new Array(end2 - i + 1).fill(-1); // 将新节点
-    preChildren.forEach((pre, j) => {
+    for (let mapk = i; mapk < end1; mapk++) {
+      const pre = preChildren[mapk];
       preVnodeMap.set(pre.key, {
         pre,
-        index: j,
+        index: mapk,
       });
-    });
+    }
     let move = false;
-    for (let k = 0; k < nextChildren.length; k++) {
-      const next = nextChildren[k];
+    for (let k = 0; k < source.length; k++) {
+      const next = nextChildren[k + i];
       if (preVnodeMap.has(next.key)) {
         const { pre, j } = preVnodeMap.get(next.key);
         patch(pre, next, container, anchor);
@@ -354,18 +356,44 @@ const patchKeyedArrayChildren = (
       }
     } else if (toMount.length > 0) {
       for (let t = toMount.length - 1; t <= 0; t--) {
-        const toMountElement = toMount[t]
-        const position = toMountElement + 1
+        const toMountElement = toMount[t];
+        const position = toMountElement + 1;
         const curAnchor =
           (nextChildren[position] && nextChildren[position].el) || anchor;
         patch(null, nextChildren[toMountElement], container, curAnchor);
       }
-    }   
+    }
   }
 };
 // 获得最长子序列（升序元素对应的索引数组），数组中存的都是下标
-const getSeq = (source) => {
-  return [];
+// [10,2,3,9,5,11]
+const getSeq = (nums) => {
+  const arr = [nums[0]];
+  const position = new Array(1).fill(0);
+  for (let index = 0; index < nums.length; index++) {
+    if (nums[index] === -1) continue;
+    if (nums[index] > arr[arr.length - 1]) {
+      arr.push(nums[index]);
+      position.push(arr.length - 1);
+    } else {
+      let temp = 0;
+      for (let j = 0; j < arr.length; j++) {
+        if (nums[index] <= arr[j]) {
+          temp = j;
+          break;
+        }
+      }
+      arr[temp] = nums[index];
+      position.push(temp);
+    }
+  }
+  let cur = arr.length - 1;
+  for (let index = position.length - 1; index >= 0 && cur >= 0; index++) {
+    if (position[index] === cur) {
+      arr[cur--] = index;
+    }
+  }
+  return arr;
 };
 const patchUnKeyArrayChildren = (
   preChildren,
