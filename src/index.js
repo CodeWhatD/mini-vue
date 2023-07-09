@@ -4,13 +4,22 @@ import { ref } from "./reactive/ref";
 import { computed } from "./reactive/computed";
 import { h, render, Fragment } from "./runtime";
 
-const obj = reactive({
-  ok: true,
-  name: "dmy",
-});
+const Com = {
+  setup() {
+    const count = ref(0);
+    const add = () => count.value++;
+    return {
+      count,
+      add,
+    };
+  },
+  render(ctx) {
+    return [
+      h("div", null, ctx.count.value ),
+      h("button", { onClick: ctx.add }, "add"),
+    ];
+  },
+};
 
-window.obj = obj;
-
-effect(() => {
-  console.log("执行了函数"), obj.ok ? alert(obj.name) : 'false';
-});
+const vnode = h(Com);
+render(vnode, document.body);

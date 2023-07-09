@@ -1,5 +1,6 @@
 import { isBoolean, isNumber, isString } from "../utils";
 import { ShapeFlgs } from "./vnode";
+import { mountComponent } from "./component";
 // @ts-nocheck
 export const render = (vnode, container) => {
   const preVNode = container._vnode;
@@ -13,7 +14,7 @@ export const render = (vnode, container) => {
   container._vnode = vnode;
 };
 
-const patch = (preVNode, nextvnode, container, anchor) => {
+export const patch = (preVNode, nextvnode, container, anchor) => {
   // 如果两次的vnode不是相同的根节点，那么直接卸载preVnode
   if (preVNode && !isSameNode(preVNode, nextvnode)) {
     anchor = (preVNode.el || preVNode.anchor).nextSibling;
@@ -73,7 +74,10 @@ const unMountFragment = (vnode) => {
 };
 
 const processComponent = (preVNode, vnode, container, anchor) => {
-  
+  if (preVNode) {
+  } else {
+    mountComponent(vnode, container, anchor);
+  }
 };
 
 const processFragment = (preVNode, vnode, container, anchor) => {

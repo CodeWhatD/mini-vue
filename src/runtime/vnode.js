@@ -1,4 +1,4 @@
-import { isArray, isNumber, isString } from "../utils";
+import { isArray, isNumber, isObject, isString } from "../utils";
 
 export const ShapeFlgs = {
   ELEMENT: 1,
@@ -47,3 +47,15 @@ export function h(type, props, children) {
     key: props?.key,
   };
 }
+
+export const normalizeVnode = (result) => {
+  // 多根节点时，使用Fragment包裹
+  if (isArray(result)) {
+    return h(Fragment, null, result);
+  } else if (isObject(result)) {
+    // 本身传的就是一个vnode 正常返回即可
+    return result;
+  }
+  // 处理 string number情况
+  return h(Text, null, result.toString());
+};
