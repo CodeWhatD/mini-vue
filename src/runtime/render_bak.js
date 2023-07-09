@@ -72,7 +72,9 @@ const unMountFragment = (vnode) => {
   parentNode.removeChild(end);
 };
 
-const processComponent = (preVNode, vnode, container, anchor) => {};
+const processComponent = (preVNode, vnode, container, anchor) => {
+  
+};
 
 const processFragment = (preVNode, vnode, container, anchor) => {
   const fragmentStartAnchor = (vnode.el = preVNode
