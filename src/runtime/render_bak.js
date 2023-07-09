@@ -60,7 +60,9 @@ const unMount = (vnode) => {
   }
 };
 
-const unMountComponent = (vnode) => {};
+const unMountComponent = (vnode) => {
+  unMount(vnode.component.subTree);
+};
 
 const unMountFragment = (vnode) => {
   let { el: current, anchor: end } = vnode;
@@ -75,9 +77,16 @@ const unMountFragment = (vnode) => {
 
 const processComponent = (preVNode, vnode, container, anchor) => {
   if (preVNode) {
+    updateComponent(preVNode, vnode);
   } else {
     mountComponent(vnode, container, anchor);
   }
+};
+
+const updateComponent = (preVNode, vnode) => {
+  vnode.component = preVNode.component;
+  vnode.component.next = vnode;
+  vnode.component.update();
 };
 
 const processFragment = (preVNode, vnode, container, anchor) => {

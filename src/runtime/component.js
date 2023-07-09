@@ -2,7 +2,7 @@ import { reactive } from "../reactive";
 import { normalizeVnode } from "./vnode";
 import { patch } from "./render_bak";
 import { effect } from "../reactive/effect";
-const initProps = (ins, vnode) => {
+const updateProps = (ins, vnode) => {
   const { type: Component, props: vnodeProps } = vnode;
   const props = (ins.props = {});
   const attrs = (ins.attrs = {});
@@ -17,7 +17,7 @@ const initProps = (ins, vnode) => {
 export const mountComponent = (vnode, container, anchor) => {
   const { type: Component } = vnode; // 这里type就是组件含有setup的对象
 
-  const instance = {
+  const instance = (vnode.component = {
     props: null,
     attrs: null,
     setupState: null, // 用来接收setup函数返回的值
@@ -26,9 +26,10 @@ export const mountComponent = (vnode, container, anchor) => {
     subTree: null,
     update: null,
     isMount: false, // 是否已经挂载
-  };
+    next: null,
+  });
 
-  initProps(instance, vnode);
+  updateProps(instance, vnode);
   instance.setupState = Component.setup?.(instance.props, {
     attrs: instance.attrs,
   });
@@ -47,6 +48,15 @@ export const mountComponent = (vnode, container, anchor) => {
       instance.isMount = true;
     } else {
       const preTree = instance.subTree;
+      if (instance.next) {
+        vnode = instance.next;
+        instance.next = null;
+        updateProps(instance, vnode);
+        instance.ctx = {
+          ...instance.props,
+          ...instance.setupState,
+        };
+      }
       const subTree = (instance.subTree = normalizeVnode(
         Component.render(instance.ctx)
       ));
