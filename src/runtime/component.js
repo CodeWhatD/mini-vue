@@ -2,6 +2,7 @@ import { reactive } from "../reactive";
 import { normalizeVnode } from "./vnode";
 import { patch } from "./render_bak";
 import { effect } from "../reactive/effect";
+import { queueJob } from "./scheduler";
 const updateProps = (ins, vnode) => {
   const { type: Component, props: vnodeProps } = vnode;
   const props = (ins.props = {});
@@ -38,32 +39,37 @@ export const mountComponent = (vnode, container, anchor) => {
     ...instance.setupState,
   };
   // 这里就是响应式的精髓，setup的render中会调用响应式的变量，那么你只要用effet进行包裹就会收集该副作用函数实现其中响应式值变化时重新执行render
-  instance.update = effect(() => {
-    if (!instance.isMount) {
-      const subTree = (instance.subTree = normalizeVnode(
-        Component.render(instance.ctx)
-      ));
-      fallThrough(subTree, instance);
-      patch(null, subTree, container, anchor);
-      instance.isMount = true;
-    } else {
-      const preTree = instance.subTree;
-      if (instance.next) {
-        vnode = instance.next;
-        instance.next = null;
-        updateProps(instance, vnode);
-        instance.ctx = {
-          ...instance.props,
-          ...instance.setupState,
-        };
+  instance.update = effect(
+    () => {
+      if (!instance.isMount) {
+        const subTree = (instance.subTree = normalizeVnode(
+          Component.render(instance.ctx)
+        ));
+        fallThrough(subTree, instance);
+        patch(null, subTree, container, anchor);
+        instance.isMount = true;
+      } else {
+        const preTree = instance.subTree;
+        if (instance.next) {
+          vnode = instance.next;
+          instance.next = null;
+          updateProps(instance, vnode);
+          instance.ctx = {
+            ...instance.props,
+            ...instance.setupState,
+          };
+        }
+        const subTree = (instance.subTree = normalizeVnode(
+          Component.render(instance.ctx)
+        ));
+        fallThrough(subTree, instance);
+        patch(preTree, subTree, container, anchor);
       }
-      const subTree = (instance.subTree = normalizeVnode(
-        Component.render(instance.ctx)
-      ));
-      fallThrough(subTree, instance);
-      patch(preTree, subTree, container, anchor);
+    },
+    {
+      scheduler: queueJob,
     }
-  });
+  );
 };
 
 const fallThrough = (subTree, instance) => {
