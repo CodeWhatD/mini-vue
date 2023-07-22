@@ -30,3 +30,8 @@ export const isNumber = (target) => {
 export const isBoolean = (target) => {
   return target === "boolean";
 };
+
+export function camelize(str) {
+  // my-first-name => myFirstName
+  return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ""));
+}
