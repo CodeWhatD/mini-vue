@@ -35,3 +35,7 @@ export function camelize(str) {
   // my-first-name => myFirstName
   return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ""));
 }
+
+export function capitialize(str) {
+  return `${str[0].toUpperCase()}${str.slice(1)}`;
+}

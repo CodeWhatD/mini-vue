@@ -1,3 +1,4 @@
+import { complier } from "./complier";
 const HTML_TAGS =
   "html,body,base,head,link,meta,style,title,address,article,aside,footer," +
   "header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,div,dd,dl,dt,figcaption," +
@@ -22,3 +23,4 @@ function makeMap(str) {
 export const isVoidTag = makeMap(VOID_TAGS);
 export const isNativeTag = makeMap(HTML_TAGS);
 
+export { complier };

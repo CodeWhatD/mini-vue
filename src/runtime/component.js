@@ -3,6 +3,7 @@ import { normalizeVnode } from "./vnode";
 import { patch } from "./render_bak";
 import { effect } from "../reactive/effect";
 import { queueJob } from "./scheduler";
+import { complier } from "../complier";
 const updateProps = (ins, vnode) => {
   const { type: Component, props: vnodeProps } = vnode;
   const props = (ins.props = {});
@@ -42,6 +43,11 @@ export const mountComponent = (vnode, container, anchor) => {
   instance.update = effect(
     () => {
       if (!instance.isMount) {
+        if (!Component.render && Component.template) {
+          const { template } = Component;
+          const code = complier(template);
+          Component.render = new Function("ctx", code);
+        }
         const subTree = (instance.subTree = normalizeVnode(
           Component.render(instance.ctx)
         ));

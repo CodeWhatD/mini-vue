@@ -1,9 +1,10 @@
-import { NodeTypes, ElementTypes } from "./ast";
+import { NodeTypes, ElementTypes, createRoot } from "./ast";
 import { isVoidTag, isNativeTag } from ".";
 import { camelize } from "../utils";
 export function parse(content) {
   const context = createParseContext(content);
   const children = parseChildren(context);
+  return createRoot(children);
 }
 
 function createParseContext(content) {
