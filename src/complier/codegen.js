@@ -15,7 +15,7 @@ function traverseNode(node) {
       const result = traverseChildren(node);
       return result;
     case NodeTypes.ELEMENT:
-      return createElementVNode(node);
+      return resolveElementAstNode(node);
     case NodeTypes.INTERPOLATION:
       return createTextVNode(node.content);
     case NodeTypes.TEXT:
@@ -33,6 +33,29 @@ const createTextVNode = (node) => {
 // 此方法目的是方便解析静态与非静态节点内容，静态则直接转字符串相反非静态直接返回表达式内容
 const createText = ({ isStatic = true, content = "" } = {}) => {
   return isStatic ? JSON.stringify(content) : content;
+};
+
+// 处理特殊指令
+const resolveElementAstNode = (node) => {
+  const forNode = pluck(node.directives, "for");
+  if (forNode) {
+    const { exp } = forNode;
+    // 下面这个正则示例为 (item,index) in items 把 (item,index) 和 items取出来
+    const [args, source] = exp.content.split(/\sin\s|\sof\s/);
+    return `h(Fragment,null,renderList(${source.trim()},${args} => ${createElementVNode(
+      node
+    )}))`;
+  }
+  return createElementVNode(node);
+};
+
+const pluck = (directives, name, remove = true) => {
+  const index = directives.findIndex((dir) => dir.name === name);
+  const _dirInstance = directives[index];
+  if (index > -1 && remove) {
+    directives.splice(index, 1);
+  }
+  return _dirInstance;
 };
 
 const createElementVNode = (node) => {
