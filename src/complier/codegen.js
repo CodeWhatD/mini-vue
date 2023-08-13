@@ -65,7 +65,7 @@ const resolveElementAstNode = (node, parent) => {
           alternate = resolveElementAstNode(sibling, parent);
           children.splice(i, 1); // 避免重复渲染v-else节点，三目表达式已经有了
         }
-      } 
+      }
     }
     return `${condition} ? ${consequent} : ${alternate || createTextVNode()}`;
   }
@@ -95,6 +95,35 @@ const pluck = (directives, name, remove = true) => {
 const createElementVNode = (node) => {
   const { children } = node;
   const tag = JSON.stringify(node.tag);
+  const vModel = pluck(node.directives, "model");
+  if (vModel) {
+    node.directives.push(
+      {
+        type: NodeTypes.DIRECTIVE,
+        name: "bind",
+        exp: vModel.exp,
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: "value",
+          isStatic: true,
+        },
+      },
+      {
+        type: NodeTypes.DIRECTIVE,
+        name: "on",
+        exp: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `($event) => ${vModel.exp.content} = $event.target.value`,
+          isStatic: false,
+        },
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: "input",
+          isStatic: true,
+        },
+      }
+    );
+  }
   const propsArr = createPropsArr(node);
   const propsStr = propsArr.length ? `{ ${propsArr.join(", ")} }` : "null";
 
