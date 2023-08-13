@@ -6,16 +6,16 @@ export function codegen(ast) {
     return ${code}
   `;
 }
-function traverseNode(node) {
+function traverseNode(node, parent) {
   switch (node.type) {
     case NodeTypes.ROOT:
       if (node.children.length === 1) {
-        return traverseNode(node.children[0]);
+        return traverseNode(node.children[0], node);
       }
       const result = traverseChildren(node);
       return result;
     case NodeTypes.ELEMENT:
-      return resolveElementAstNode(node);
+      return resolveElementAstNode(node, parent);
     case NodeTypes.INTERPOLATION:
       return createTextVNode(node.content);
     case NodeTypes.TEXT:
@@ -36,14 +36,48 @@ const createText = ({ isStatic = true, content = "" } = {}) => {
 };
 
 // 处理特殊指令
-const resolveElementAstNode = (node) => {
+const resolveElementAstNode = (node, parent) => {
+  // 这里有一些递归调用resolveElementAstNode 是为了处理完一个指令后，可能该标签还有其他指令需要都处理了，不用担心死循环因为一直在用pluck吃掉指令
+  // 处理 v-if
+  const ifNode =
+    pluck(node.directives, "if") || pluck(node.directives, "else-if");
+  if (ifNode) {
+    const { exp } = ifNode;
+    const condition = exp.contnet; // v-if="condition" 條件
+    const consequent = resolveElementAstNode(node, parent); // 表達式正確時的顯示
+    let alternate; // false時的顯示
+    const { children } = parent;
+    let i = children.findIndex((child) => child === node) + 1;
+    // 解释一下底下的循环，这里为了找v-if下面的兄弟节点，也就是v-else，需要排除空格节点找有效节点所以循环去找
+    for (; i < children.length; i++) {
+      const sibling = children[i];
+      if (sibling.type === NodeTypes.TEXT && !sibling.content.trim()) {
+        children.splice(i, 1);
+        i--; // 防止for循环错乱
+        continue;
+      }
+      // 找到下一个兄弟节点
+      if (sibling.type === NodeTypes.ELEMENT) {
+        if (
+          pluck(sibling.directives, "else") ||
+          pluck(sibling.directives, "else-if", false)
+        ) {
+          alternate = resolveElementAstNode(sibling, parent);
+          children.splice(i, 1); // 避免重复渲染v-else节点，三目表达式已经有了
+        }
+      } 
+    }
+    return `${condition} ? ${consequent} : ${alternate || createTextVNode()}`;
+  }
+  // 处理 v-for
   const forNode = pluck(node.directives, "for");
   if (forNode) {
     const { exp } = forNode;
     // 下面这个正则示例为 (item,index) in items 把 (item,index) 和 items取出来
     const [args, source] = exp.content.split(/\sin\s|\sof\s/);
-    return `h(Fragment,null,renderList(${source.trim()},${args} => ${createElementVNode(
-      node
+    return `h(Fragment,null,renderList(${source.trim()},${args} => ${resolveElementAstNode(
+      node,
+      parent
     )}))`;
   }
   return createElementVNode(node);
@@ -109,7 +143,7 @@ const traverseChildren = (node) => {
   const _results = new Array();
   for (let i = 0; i < children.length; i++) {
     const child = children[i];
-    const result = traverseNode(child);
+    const result = traverseNode(child, node);
     _results.push(result);
   }
   return `[${_results.join(", ")}]`;
